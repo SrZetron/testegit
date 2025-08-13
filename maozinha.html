@@ -55,9 +55,8 @@
 
     <script>
         window.onload = () => {
-            let URL = "https://teachablemachine.withgoogle.com/models/Hncm7eAQl/"; // coloque o seu link aqui
+            let URL = "https://teachablemachine.withgoogle.com/models/Hncm7eAQl/";
 
-            // Garantir que termina com /
             if (!URL.endsWith("/")) URL += "/";
 
             let model, webcam, isOn = false;
@@ -71,12 +70,12 @@
                         await ligarCamera();
                         this.textContent = "Desligar Câmera";
                         isOn = true;
+                        loop();
                     } catch (error) {
                         alert("Erro ao ligar câmera: " + error.message);
                         console.error(error);
                     }
                 } else {
-                    isOn = false;
                     desligarCamera();
                     this.textContent = "Ligar Câmera";
                     statusDiv.textContent = "";
@@ -100,11 +99,10 @@
                 container.style.backgroundColor = "#40f865";
                 container.innerHTML = "";
                 container.appendChild(webcam.canvas);
-
-                window.requestAnimationFrame(loop);
             }
 
             function desligarCamera() {
+                isOn = false;
                 if (webcam) {
                     webcam.stop();
                     webcam = null;
@@ -115,7 +113,7 @@
             }
 
             async function loop() {
-                if (!isOn || !webcam) return;
+                if (!isOn) return;
 
                 webcam.update();
                 await predict();
@@ -124,8 +122,6 @@
             }
 
             async function predict() {
-                if (!model || !webcam) return;
-
                 const prediction = await model.predict(webcam.canvas);
 
                 let maxPrediction = prediction.reduce((prev, current) =>
