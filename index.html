@@ -42,67 +42,49 @@
 
 <body>
     <h1>IA com Teachable Machine</h1>
-
     <div id="webcam-container"></div>
-
     <button id="toggleBtn">Ligar Câmera</button>
-
     <div id="status"></div>
-
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.2.0/dist/tf.min.js"></script>
     <script
         src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.4/dist/teachablemachine-image.min.js"></script>
-
     <script>
         window.onload = () => {
             let URL = "https://teachablemachine.withgoogle.com/models/Hncm7eAQl/";
-
             if (!URL.endsWith("/")) URL += "/";
-
             let model, webcam, isOn = false;
-
             const statusDiv = document.getElementById("status");
             const container = document.getElementById("webcam-container");
-
             document.getElementById("toggleBtn").addEventListener("click", async function () {
                 if (!isOn) {
                     try {
                         await ligarCamera();
                         this.textContent = "Desligar Câmera";
                         isOn = true;
-                        loop();
                     } catch (error) {
                         alert("Erro ao ligar câmera: " + error.message);
-                        console.error(error);
                     }
                 } else {
+                    isOn = false;
                     desligarCamera();
                     this.textContent = "Ligar Câmera";
                     statusDiv.textContent = "";
                     location.reload();
                 }
             });
-
             async function ligarCamera() {
                 const tmImage = window.tmImage;
                 if (!tmImage) throw new Error("Biblioteca Teachable Machine não carregada.");
-
-                const modelURL = URL + "model.json";
-                const metadataURL = URL + "metadata.json";
-
-                model = await tmImage.load(modelURL, metadataURL);
-
+                model = await tmImage.load(URL + "model.json", URL + "metadata.json");
                 webcam = new tmImage.Webcam(300, 300, true);
                 await webcam.setup();
                 await webcam.play();
-
                 container.style.backgroundColor = "#40f865";
                 container.innerHTML = "";
                 container.appendChild(webcam.canvas);
+                window.requestAnimationFrame(loop);
             }
-
             function desligarCamera() {
-                isOn = false;
                 if (webcam) {
                     webcam.stop();
                     webcam = null;
@@ -111,30 +93,22 @@
                 container.style.backgroundColor = "white";
                 document.body.style.backgroundColor = "white";
             }
-
             async function loop() {
-                if (!isOn) return;
-
+                if (!isOn || !webcam) return;
                 webcam.update();
                 await predict();
-
                 window.requestAnimationFrame(loop);
             }
-
             async function predict() {
+                if (!model || !webcam) return;
                 const prediction = await model.predict(webcam.canvas);
-
                 let maxPrediction = prediction.reduce((prev, current) =>
                     prev.probability > current.probability ? prev : current);
-
-                let classe = maxPrediction.className.toLowerCase().trim();
-
-                console.log("Detectado:", classe);
-
-                if (classe.includes("fechada")) {
+                let classe = maxPrediction.className.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                if (classe.includes("fechado")) {
                     document.body.style.backgroundColor = "green";
                     statusDiv.textContent = "Mão fechada";
-                } else if (classe.includes("aberta")) {
+                } else if (classe.includes("aberto")) {
                     document.body.style.backgroundColor = "red";
                     statusDiv.textContent = "Mão aberta";
                 } else {
